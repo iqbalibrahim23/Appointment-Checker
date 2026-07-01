@@ -6,6 +6,7 @@
 <title>Status Pekerja — Pejabat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --ink:#101319;
@@ -118,6 +119,29 @@
   }
   .dept-select:focus{ outline:none; border-color:var(--gold); }
 
+  /* SYNC BAR */
+  .sync-bar{
+    margin-top:14px; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:10px 12px;
+  }
+  .sync-status{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
+  .sync-dot.on{ background:var(--avail); }
+  .sync-dot.err{ background:var(--busy); }
+  .sync-text{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sync-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase; padding:7px 12px; border-radius:6px;
+    border:1px solid var(--gold); background:rgba(242,183,5,0.08); color:var(--gold);
+    cursor:pointer; flex-shrink:0; transition:background .15s;
+  }
+  .sync-btn:hover{ background:rgba(242,183,5,0.16); }
+  .sync-btn:disabled{ opacity:.5; cursor:default; }
+
+  .status-pill.unknown{ background:rgba(94,102,115,0.16); color:var(--text-2); border-color:var(--hair); }
+  .cal-day.unknown{ background:rgba(94,102,115,0.16); color:var(--text-2); }
+
   main{ padding-top:16px; }
 
   /* LIST VIEW — board table */
@@ -218,7 +242,7 @@
     <div class="brand-row">
       <div>
         <h1>Status Pekerja</h1>
-        <div class="sub">Papan status pejabat &middot; Appointment Checker</div>
+        <div class="sub">Papan status &middot; Team ICT Teknikal</div>
       </div>
       <div class="clock">
         <div class="time" id="clockTime">--:--</div>
@@ -229,6 +253,14 @@
     <div class="tabs">
       <button class="tab-btn active" data-view="list">Senarai</button>
       <button class="tab-btn" data-view="cal">Kalendar</button>
+    </div>
+
+    <div class="sync-bar">
+      <div class="sync-status">
+        <span class="sync-dot" id="syncDot"></span>
+        <span class="sync-text" id="syncText">Belum log masuk &middot; papar mock data</span>
+      </div>
+      <button class="sync-btn" id="syncBtn">Log Masuk Google</button>
     </div>
 
     <div class="controls">
@@ -259,20 +291,13 @@
   </div>
 </main>
 
-<footer class="wrap">Data dipaparkan adalah mock data untuk tujuan reka bentuk sahaja.</footer>
+<footer class="wrap">Klik "Log Masuk Google" untuk tarik status sebenar dari Google Calendar Team ICT.</footer>
 
 <script>
 const employees = [
-  { name:"Ahmad Faiz bin Rosli", dept:"Pentadbiran", status:"available", note:"Di meja, boleh dihubungi" },
-  { name:"Nurul Aina binti Zainal", dept:"Kewangan", status:"busy", note:"Menghadiri Mesyuarat Jawatankuasa Bil 2/2026 (sehingga 3:00 PM)" },
-  { name:"Tan Wei Ming", dept:"IT", status:"available", note:"Di pejabat" },
-  { name:"Siti Farhana binti Yusof", dept:"Sumber Manusia", status:"busy", note:"Temu duga calon staf baharu (sehingga 2:30 PM)" },
-  { name:"Rajesh a/l Kumar", dept:"Pemasaran", status:"available", note:"Di pejabat" },
-  { name:"Lim Chee Keong", dept:"IT", status:"busy", note:"Menyelenggara sistem server (sehingga 4:00 PM)" },
-  { name:"Nor Aishah binti Ismail", dept:"Pentadbiran", status:"available", note:"Di meja" },
-  { name:"Muhammad Hafiz bin Ahmad", dept:"Kewangan", status:"busy", note:"Menghadiri Mesyuarat Bajet Tahunan (sehingga 12:00 PM)" },
-  { name:"Chong Mei Ling", dept:"Pemasaran", status:"busy", note:"Mesyuarat dengan klien (sehingga 1:15 PM)" },
-  { name:"Vasanthi a/p Muniandy", dept:"Sumber Manusia", status:"available", note:"Di pejabat" }
+  { name:"Muhammad Iqbal Khan Bin Ibrahim", dept:"ICT Teknikal", email:"iqbalibrahim@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" },
+  { name:"Mohd Fauzi Bin Samat", dept:"ICT Teknikal", email:"fauzi@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" },
+  { name:"Mohammad Nor Azni Bin Zainal Abidin", dept:"ICT Teknikal", email:"norazni@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" }
 ];
 
 const days = ["ISN","SEL","RAB","KHA","JUM"];
@@ -334,7 +359,7 @@ function renderList(){
                 </div>
               </div>
             </td>
-            <td><span class="status-pill ${e.status === 'available' ? 'avail' : 'busy'}">${e.status === 'available' ? 'Available' : 'Busy'}</span></td>
+            <td><span class="status-pill ${e.status === 'available' ? 'avail' : e.status === 'busy' ? 'busy' : 'unknown'}">${e.status === 'available' ? 'Available' : e.status === 'busy' ? 'Busy' : 'Belum Sync'}</span></td>
             <td><div class="cell-note">${e.note}</div></td>
           </tr>
         `).join('')}
@@ -353,8 +378,9 @@ function renderCalendar(){
       </div>
       <div class="cal-grid">
         ${days.map((d, i) => {
-          const s = dayStatus(seed + 1, i);
-          return `<div class="cal-day ${s === 'available' ? 'avail' : 'busy'}"><span class="d">${d}</span></div>`;
+          const s = e.week ? e.week[i] : 'unknown';
+          const cls = s === 'available' ? 'avail' : s === 'busy' ? 'busy' : 'unknown';
+          return `<div class="cal-day ${cls}"><span class="d">${d}</span></div>`;
         }).join('')}
       </div>
     </div>
@@ -396,6 +422,138 @@ renderList();
 renderCalendar();
 updateClock();
 setInterval(updateClock, 1000);
+
+/* ===== Google Calendar Integration ===== */
+const CLIENT_ID = "552705528679-1236r3c1u5t5ii8gf098bnar3timpvu7.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+let tokenClient = null;
+let accessToken = null;
+
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+}
+
+async function fetchEmployeeStatus(emp, token){
+  try{
+    const now = new Date();
+    const startOfWeek = getMonday(now);
+    startOfWeek.setHours(0,0,0,0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 5);
+
+    const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method:"POST",
+      headers:{ "Authorization":"Bearer " + token, "Content-Type":"application/json" },
+      body: JSON.stringify({ timeMin: startOfWeek.toISOString(), timeMax: endOfWeek.toISOString(), items:[{ id: emp.email }] })
+    });
+    if(!fbRes.ok) throw new Error("freebusy " + fbRes.status);
+    const fbData = await fbRes.json();
+    const cal = fbData.calendars && fbData.calendars[emp.email];
+    if(!cal) throw new Error("tiada akses");
+    const busyPeriods = (cal.busy || []).map(p => ({ start:new Date(p.start), end:new Date(p.end) }));
+
+    emp.week = [];
+    for(let i = 0; i < 5; i++){
+      const dayStart = new Date(startOfWeek); dayStart.setDate(dayStart.getDate() + i);
+      const dayEnd = new Date(dayStart); dayEnd.setHours(23,59,59,999);
+      const isBusy = busyPeriods.some(p => p.start < dayEnd && p.end > dayStart);
+      emp.week.push(isBusy ? "busy" : "available");
+    }
+
+    const isBusyNow = busyPeriods.some(p => p.start <= now && p.end > now);
+    emp.status = isBusyNow ? "busy" : "available";
+
+    if(isBusyNow){
+      const dayStart = new Date(now); dayStart.setHours(0,0,0,0);
+      const dayEnd = new Date(now); dayEnd.setHours(23,59,59,999);
+      const evRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(emp.email)}/events?timeMin=${dayStart.toISOString()}&timeMax=${dayEnd.toISOString()}&singleEvents=true&orderBy=startTime`,
+        { headers:{ "Authorization":"Bearer " + token } }
+      );
+      let matched = null;
+      if(evRes.ok){
+        const evData = await evRes.json();
+        matched = (evData.items || []).find(ev => {
+          const s = new Date(ev.start.dateTime || ev.start.date);
+          const e = new Date(ev.end.dateTime || ev.end.date);
+          return s <= now && e > now;
+        });
+      }
+      if(matched){
+        const endTime = new Date(matched.end.dateTime || matched.end.date);
+        const endStr = endTime.toLocaleTimeString("ms-MY", { hour:"2-digit", minute:"2-digit" });
+        emp.note = `${matched.summary || "Mesyuarat"} (sehingga ${endStr})`;
+      } else {
+        emp.note = "Sibuk (tajuk tidak dapat diakses — kongsi kalendar dengan 'See all event details')";
+      }
+    } else {
+      emp.note = "Di pejabat, boleh dihubungi";
+    }
+  } catch(err){
+    emp.status = "unknown";
+    emp.note = "Tiada akses kalendar (" + (err.message || "ralat") + ")";
+  }
+}
+
+async function syncAll(token){
+  const btn = document.getElementById("syncBtn");
+  const text = document.getElementById("syncText");
+  const dot = document.getElementById("syncDot");
+  btn.disabled = true;
+  text.textContent = "Menyegerakkan...";
+
+  await Promise.all(employees.map(e => fetchEmployeeStatus(e, token)));
+
+  renderList();
+  renderCalendar();
+
+  const anyError = employees.some(e => e.status === "unknown");
+  dot.classList.toggle("on", !anyError);
+  dot.classList.toggle("err", anyError);
+  const now = new Date();
+  text.textContent = "Disegerakkan pada " + now.toLocaleTimeString("ms-MY", { hour:"2-digit", minute:"2-digit" });
+  btn.disabled = false;
+  btn.textContent = "Segerak Semula";
+}
+
+function initGoogleAuth(){
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if(resp.error){
+        document.getElementById("syncDot").classList.add("err");
+        document.getElementById("syncText").textContent = "Log masuk gagal: " + resp.error;
+        return;
+      }
+      accessToken = resp.access_token;
+      syncAll(accessToken);
+    }
+  });
+}
+
+document.getElementById("syncBtn").addEventListener("click", () => {
+  if(!tokenClient){
+    document.getElementById("syncText").textContent = "Google belum sedia, cuba lagi sebentar...";
+    return;
+  }
+  tokenClient.requestAccessToken();
+});
+
+(function waitForGoogle(){
+  if(window.google && google.accounts){
+    initGoogleAuth();
+  } else {
+    setTimeout(waitForGoogle, 300);
+  }
+})();
+
+setInterval(() => {
+  if(accessToken) syncAll(accessToken);
+}, 5 * 60 * 1000);
 </script>
 
 </body>
