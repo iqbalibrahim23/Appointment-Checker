@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Status Pekerja — Pejabat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101319;
+    --board:#171B22;
+    --panel:#1E232C;
+    --panel-2:#252B36;
+    --hair:#333A46;
+    --gold:#F2B705;
+    --gold-dim:#8a7318;
+    --avail:#38D993;
+    --avail-dim:#1F6B4A;
+    --busy:#FF6B5B;
+    --busy-dim:#7A342B;
+    --text-1:#EDEFF2;
+    --text-2:#9BA3B0;
+    --text-3:#5E6673;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text-1);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:2rem;
+  }
+  .wrap{ max-width:520px; margin:0 auto; padding:0 16px; }
+
+  /* HEADER — board signage */
+  header{
+    background:var(--board);
+    border-bottom:2px solid var(--gold);
+    padding:20px 16px 16px;
+    position:sticky; top:0; z-index:10;
+  }
+  .brand-row{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  }
+  .brand-row h1{
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:19px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-1);
+  }
+  .brand-row .sub{
+    font-size:11px;
+    color:var(--gold);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-top:2px;
+  }
+  .clock{
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+    flex-shrink:0;
+  }
+  .clock .time{
+    font-size:20px; font-weight:600; color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
+  .clock .date{
+    font-size:10px; color:var(--text-2); margin-top:2px; text-transform:uppercase; letter-spacing:0.04em;
+  }
+
+  /* TABS */
+  .tabs{
+    display:flex; gap:0; margin-top:16px;
+    border:1px solid var(--hair); border-radius:8px; overflow:hidden;
+  }
+  .tab-btn{
+    flex:1; background:var(--panel); color:var(--text-2);
+    border:none; padding:10px 8px; font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:0.05em; text-transform:uppercase; font-weight:500;
+    cursor:pointer; transition:background .15s, color .15s;
+  }
+  .tab-btn + .tab-btn{ border-left:1px solid var(--hair); }
+  .tab-btn.active{ background:var(--gold); color:#241C02; font-weight:600; }
+
+  /* SEARCH + FILTERS */
+  .controls{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .search-box{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:9px 12px;
+  }
+  .search-box svg{ flex-shrink:0; opacity:.5; }
+  .search-box input{
+    background:none; border:none; outline:none; color:var(--text-1);
+    font-family:'Inter',sans-serif; font-size:14px; width:100%;
+  }
+  .search-box input::placeholder{ color:var(--text-3); }
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.04em;
+    text-transform:uppercase; padding:6px 12px; border-radius:20px;
+    border:1px solid var(--hair); background:var(--panel); color:var(--text-2);
+    cursor:pointer; transition:all .15s; user-select:none;
+  }
+  .chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,183,5,0.08); }
+
+  .dept-select{
+    -webkit-appearance:none; appearance:none;
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    color:var(--text-1); font-family:'IBM Plex Mono',monospace; font-size:12px;
+    letter-spacing:0.03em; padding:9px 32px 9px 12px; width:100%;
+    cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239BA3B0' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+  }
+  .dept-select:focus{ outline:none; border-color:var(--gold); }
+
+  main{ padding-top:16px; }
+
+  /* LIST VIEW — board table */
+  .list{ animation:rowIn .25s ease backwards; }
+  @keyframes rowIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .board-table{
+    width:100%; border-collapse:collapse;
+    background:var(--panel); border:1px solid var(--hair); border-radius:10px;
+    overflow:hidden;
+  }
+  .board-table thead th{
+    background:var(--panel-2);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--gold); text-align:left;
+    padding:10px 12px; border-bottom:1px solid var(--hair);
+  }
+  .board-table tbody tr{ border-bottom:1px solid var(--hair); }
+  .board-table tbody tr:last-child{ border-bottom:none; }
+  .board-table td{ padding:12px; vertical-align:top; }
+  .cell-emp{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .avatar{
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
+    background:var(--panel-2); border:1px solid var(--hair);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Archivo',sans-serif; font-weight:700; font-size:12.5px; color:var(--text-1);
+  }
+  .cell-emp .txt .name{ font-size:13.5px; font-weight:600; color:var(--text-1); line-height:1.3; }
+  .cell-emp .txt .dept{ font-size:11px; color:var(--text-2); margin-top:1px; }
+  .status-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px; font-weight:600; letter-spacing:0.05em;
+    padding:5px 9px; border-radius:4px; text-transform:uppercase;
+    white-space:nowrap; display:inline-block;
+    border-bottom:2px solid rgba(0,0,0,0.25);
+  }
+  .status-pill.avail{ background:rgba(56,217,147,0.14); color:var(--avail); border-color:var(--avail-dim); }
+  .status-pill.busy{ background:rgba(255,107,91,0.14); color:var(--busy); border-color:var(--busy-dim); }
+  .cell-note{ font-size:12px; color:var(--text-2); line-height:1.45; max-width:220px; }
+
+  @media (max-width:560px){
+    .board-table thead{ display:none; }
+    .board-table, .board-table tbody, .board-table tr, .board-table td{ display:block; width:100%; }
+    .board-table tbody tr{
+      background:var(--panel); border-bottom:1px solid var(--hair);
+      padding:12px; display:flex; flex-direction:column; gap:8px;
+    }
+    .board-table td{ padding:0; }
+    .cell-note{ max-width:none; }
+    .cell-note::before{
+      content:'Maklumat'; display:block; font-family:'IBM Plex Mono',monospace;
+      font-size:9.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-3);
+      margin-bottom:3px;
+    }
+  }
+
+  .empty{
+    text-align:center; padding:40px 20px; color:var(--text-3);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em;
+  }
+
+  /* CALENDAR VIEW */
+  .cal{ display:none; flex-direction:column; gap:10px; }
+  .cal.show{ display:flex; }
+  .list.hide{ display:none; }
+  .cal-legend{
+    display:flex; gap:16px; font-size:11px; color:var(--text-2); margin-bottom:4px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .cal-legend span{ display:flex; align-items:center; gap:5px; }
+  .dot{ width:8px; height:8px; border-radius:2px; display:inline-block; }
+  .dot.avail{ background:var(--avail); }
+  .dot.busy{ background:var(--busy); }
+
+  .cal-row{
+    background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:12px 14px;
+  }
+  .cal-row .cal-name{ font-size:13.5px; font-weight:600; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+  .cal-row .cal-name .dept-tag{ font-size:10px; font-weight:400; color:var(--text-3); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
+  .cal-day{
+    aspect-ratio:1; border-radius:5px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2px;
+  }
+  .cal-day .d{ font-size:9px; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; opacity:.85; }
+  .cal-day.avail{ background:rgba(56,217,147,0.14); color:var(--avail); }
+  .cal-day.busy{ background:rgba(255,107,91,0.14); color:var(--busy); }
+
+  footer{
+    margin-top:24px; text-align:center; font-size:10.5px; color:var(--text-3);
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; padding:0 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand-row">
+      <div>
+        <h1>Status Pekerja</h1>
+        <div class="sub">Papan status pejabat &middot; Appointment Checker</div>
+      </div>
+      <div class="clock">
+        <div class="time" id="clockTime">--:--</div>
+        <div class="date" id="clockDate">-- --- ----</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-view="list">Senarai</button>
+      <button class="tab-btn" data-view="cal">Kalendar</button>
+    </div>
+
+    <div class="controls">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="Cari nama pekerja...">
+      </div>
+      <select class="dept-select" id="deptSelect">
+        <option value="all">Semua Jabatan</option>
+      </select>
+      <div class="chips" id="filterChips">
+        <div class="chip active" data-filter="all">Semua</div>
+        <div class="chip" data-filter="available">Available</div>
+        <div class="chip" data-filter="busy">Busy</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="list" id="listView"></div>
+  <div class="cal" id="calView">
+    <div class="cal-legend">
+      <span><i class="dot avail"></i> Available</span>
+      <span><i class="dot busy"></i> Busy</span>
+    </div>
+    <div id="calContainer"></div>
+  </div>
+</main>
+
+<footer class="wrap">Data dipaparkan adalah mock data untuk tujuan reka bentuk sahaja.</footer>
+
+<script>
+const employees = [
+  { name:"Ahmad Faiz bin Rosli", dept:"Pentadbiran", status:"available", note:"Di meja, boleh dihubungi" },
+  { name:"Nurul Aina binti Zainal", dept:"Kewangan", status:"busy", note:"Menghadiri Mesyuarat Jawatankuasa Bil 2/2026 (sehingga 3:00 PM)" },
+  { name:"Tan Wei Ming", dept:"IT", status:"available", note:"Di pejabat" },
+  { name:"Siti Farhana binti Yusof", dept:"Sumber Manusia", status:"busy", note:"Temu duga calon staf baharu (sehingga 2:30 PM)" },
+  { name:"Rajesh a/l Kumar", dept:"Pemasaran", status:"available", note:"Di pejabat" },
+  { name:"Lim Chee Keong", dept:"IT", status:"busy", note:"Menyelenggara sistem server (sehingga 4:00 PM)" },
+  { name:"Nor Aishah binti Ismail", dept:"Pentadbiran", status:"available", note:"Di meja" },
+  { name:"Muhammad Hafiz bin Ahmad", dept:"Kewangan", status:"busy", note:"Menghadiri Mesyuarat Bajet Tahunan (sehingga 12:00 PM)" },
+  { name:"Chong Mei Ling", dept:"Pemasaran", status:"busy", note:"Mesyuarat dengan klien (sehingga 1:15 PM)" },
+  { name:"Vasanthi a/p Muniandy", dept:"Sumber Manusia", status:"available", note:"Di pejabat" }
+];
+
+const days = ["ISN","SEL","RAB","KHA","JUM"];
+
+function initials(name){
+  const parts = name.replace(/bin |binti |a\/l |a\/p /gi,"").split(" ");
+  return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+}
+
+// deterministic pseudo-random pattern per employee for calendar mock
+function dayStatus(seed, dayIdx){
+  const v = (seed * 31 + dayIdx * 17) % 5;
+  return v < 2 ? "busy" : "available";
+}
+
+function populateDeptSelect(){
+  const select = document.getElementById('deptSelect');
+  const depts = [...new Set(employees.map(e => e.dept))];
+  select.innerHTML = '<option value="all">Semua Jabatan</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function renderList(){
+  const container = document.getElementById('listView');
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const activeFilter = document.querySelector('.chip.active').dataset.filter;
+  const activeDept = document.getElementById('deptSelect').value;
+
+  const filtered = employees.filter(e => {
+    const matchesQuery = e.name.toLowerCase().includes(query) || e.dept.toLowerCase().includes(query);
+    const matchesFilter = activeFilter === 'all' || e.status === activeFilter;
+    const matchesDept = activeDept === 'all' || e.dept === activeDept;
+    return matchesQuery && matchesFilter && matchesDept;
+  });
+
+  if(filtered.length === 0){
+    container.innerHTML = '<div class="empty">Tiada pekerja sepadan dengan carian.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="board-table">
+      <thead>
+        <tr>
+          <th>Pekerja</th>
+          <th>Status</th>
+          <th>Maklumat</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(e => `
+          <tr>
+            <td>
+              <div class="cell-emp">
+                <div class="avatar">${initials(e.name)}</div>
+                <div class="txt">
+                  <div class="name">${e.name}</div>
+                  <div class="dept">${e.dept}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="status-pill ${e.status === 'available' ? 'avail' : 'busy'}">${e.status === 'available' ? 'Available' : 'Busy'}</span></td>
+            <td><div class="cell-note">${e.note}</div></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderCalendar(){
+  const container = document.getElementById('calContainer');
+  container.innerHTML = employees.map((e, seed) => `
+    <div class="cal-row" style="margin-bottom:10px;">
+      <div class="cal-name">
+        <span>${e.name}</span>
+        <span class="dept-tag">${e.dept}</span>
+      </div>
+      <div class="cal-grid">
+        ${days.map((d, i) => {
+          const s = dayStatus(seed + 1, i);
+          return `<div class="cal-day ${s === 'available' ? 'avail' : 'busy'}"><span class="d">${d}</span></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateClock(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockTime').textContent = `${hh}:${mm}`;
+  const opts = { day:'2-digit', month:'short', year:'numeric' };
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('ms-MY', opts);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('listView').classList.toggle('hide', view !== 'list');
+    document.getElementById('calView').classList.toggle('show', view === 'cal');
+  });
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderList();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', renderList);
+document.getElementById('deptSelect').addEventListener('change', renderList);
+
+populateDeptSelect();
+renderList();
+renderCalendar();
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>
