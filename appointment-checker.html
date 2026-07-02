@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Status Pekerja — Pejabat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --ink:#101319;
+    --board:#171B22;
+    --panel:#1E232C;
+    --panel-2:#252B36;
+    --hair:#333A46;
+    --gold:#F2B705;
+    --gold-dim:#8a7318;
+    --avail:#38D993;
+    --avail-dim:#1F6B4A;
+    --busy:#FF6B5B;
+    --busy-dim:#7A342B;
+    --text-1:#EDEFF2;
+    --text-2:#9BA3B0;
+    --text-3:#5E6673;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text-1);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:2rem;
+  }
+  .wrap{ max-width:520px; margin:0 auto; padding:0 16px; }
+
+  /* HEADER — board signage */
+  header{
+    background:var(--board);
+    border-bottom:2px solid var(--gold);
+    padding:20px 16px 16px;
+    position:sticky; top:0; z-index:10;
+  }
+  .brand-row{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  }
+  .brand-row h1{
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:19px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-1);
+  }
+  .brand-row .sub{
+    font-size:11px;
+    color:var(--gold);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-top:2px;
+  }
+  .clock{
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+    flex-shrink:0;
+  }
+  .clock .time{
+    font-size:20px; font-weight:600; color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
+  .clock .date{
+    font-size:10px; color:var(--text-2); margin-top:2px; text-transform:uppercase; letter-spacing:0.04em;
+  }
+
+  /* TABS */
+  .tabs{
+    display:flex; gap:0; margin-top:16px;
+    border:1px solid var(--hair); border-radius:8px; overflow:hidden;
+  }
+  .tab-btn{
+    flex:1; background:var(--panel); color:var(--text-2);
+    border:none; padding:10px 8px; font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:0.05em; text-transform:uppercase; font-weight:500;
+    cursor:pointer; transition:background .15s, color .15s;
+  }
+  .tab-btn + .tab-btn{ border-left:1px solid var(--hair); }
+  .tab-btn.active{ background:var(--gold); color:#241C02; font-weight:600; }
+
+  /* SEARCH + FILTERS */
+  .controls{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .search-box{
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:9px 12px;
+  }
+  .search-box svg{ flex-shrink:0; opacity:.5; }
+  .search-box input{
+    background:none; border:none; outline:none; color:var(--text-1);
+    font-family:'Inter',sans-serif; font-size:14px; width:100%;
+  }
+  .search-box input::placeholder{ color:var(--text-3); }
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.04em;
+    text-transform:uppercase; padding:6px 12px; border-radius:20px;
+    border:1px solid var(--hair); background:var(--panel); color:var(--text-2);
+    cursor:pointer; transition:all .15s; user-select:none;
+  }
+  .chip.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,183,5,0.08); }
+
+  .dept-select{
+    -webkit-appearance:none; appearance:none;
+    background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    color:var(--text-1); font-family:'IBM Plex Mono',monospace; font-size:12px;
+    letter-spacing:0.03em; padding:9px 32px 9px 12px; width:100%;
+    cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239BA3B0' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+  }
+  .dept-select:focus{ outline:none; border-color:var(--gold); }
+
+  /* SYNC BAR */
+  .sync-bar{
+    margin-top:14px; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    padding:10px 12px;
+  }
+  .sync-status{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
+  .sync-dot.on{ background:var(--avail); }
+  .sync-dot.err{ background:var(--busy); }
+  .sync-text{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sync-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase; padding:7px 12px; border-radius:6px;
+    border:1px solid var(--gold); background:rgba(242,183,5,0.08); color:var(--gold);
+    cursor:pointer; flex-shrink:0; transition:background .15s;
+  }
+  .sync-btn:hover{ background:rgba(242,183,5,0.16); }
+  .sync-btn:disabled{ opacity:.5; cursor:default; }
+
+  .status-pill.unknown{ background:rgba(94,102,115,0.16); color:var(--text-2); border-color:var(--hair); }
+  .cal-day.unknown{ background:rgba(94,102,115,0.16); color:var(--text-2); }
+
+  .isi-btn{
+    margin-top:10px; width:100%;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    letter-spacing:0.05em; text-transform:uppercase; padding:11px 12px; border-radius:8px;
+    border:1px solid var(--gold); background:var(--gold); color:#241C02;
+    cursor:pointer; display:none; align-items:center; justify-content:center; gap:8px;
+  }
+  .isi-btn.show{ display:flex; }
+  .isi-btn:hover{ background:#ffc720; }
+
+  /* MODAL */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    z-index:100; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    width:100%; max-width:520px; background:var(--board); border-top:2px solid var(--gold);
+    border-radius:16px 16px 0 0; padding:20px 16px 24px; animation:modalUp .25s ease;
+    max-height:88vh; overflow-y:auto;
+  }
+  @keyframes modalUp{ from{ transform:translateY(20px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  .modal-title{
+    font-family:'Archivo',sans-serif; font-weight:800; font-size:16px;
+    letter-spacing:0.04em; text-transform:uppercase; color:var(--text-1); margin-bottom:14px;
+  }
+  .field{ margin-bottom:12px; }
+  .field label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    letter-spacing:0.05em; text-transform:uppercase; color:var(--text-2); margin-bottom:6px;
+  }
+  .field input, .field textarea, .field select{
+    width:100%; background:var(--panel); border:1px solid var(--hair); border-radius:8px;
+    color:var(--text-1); font-family:'Inter',sans-serif; font-size:14px; padding:10px 12px;
+    outline:none;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{ border-color:var(--gold); }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .row-2{ display:flex; gap:10px; }
+  .row-2 .field{ flex:1; }
+  .modal-actions{ display:flex; gap:10px; margin-top:16px; }
+  .modal-actions button{
+    flex:1; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    letter-spacing:0.05em; text-transform:uppercase; padding:11px; border-radius:8px; cursor:pointer;
+  }
+  .btn-cancel{ background:var(--panel); border:1px solid var(--hair); color:var(--text-2); }
+  .btn-submit{ background:var(--gold); border:1px solid var(--gold); color:#241C02; }
+  .btn-submit:disabled{ opacity:.5; cursor:default; }
+  .modal-msg{ font-family:'IBM Plex Mono',monospace; font-size:11px; margin-top:10px; text-align:center; }
+  .modal-msg.err{ color:var(--busy); }
+  .modal-msg.ok{ color:var(--avail); }
+
+  main{ padding-top:16px; }
+
+  /* LIST VIEW — board table */
+  .list{ animation:rowIn .25s ease backwards; }
+  @keyframes rowIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+  .board-table{
+    width:100%; border-collapse:collapse;
+    background:var(--panel); border:1px solid var(--hair); border-radius:10px;
+    overflow:hidden;
+  }
+  .board-table thead th{
+    background:var(--panel-2);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--gold); text-align:left;
+    padding:10px 12px; border-bottom:1px solid var(--hair);
+  }
+  .board-table tbody tr{ border-bottom:1px solid var(--hair); }
+  .board-table tbody tr:last-child{ border-bottom:none; }
+  .board-table td{ padding:12px; vertical-align:top; }
+  .cell-emp{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .avatar{
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
+    background:var(--panel-2); border:1px solid var(--hair);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Archivo',sans-serif; font-weight:700; font-size:12.5px; color:var(--text-1);
+  }
+  .cell-emp .txt .name{ font-size:13.5px; font-weight:600; color:var(--text-1); line-height:1.3; }
+  .cell-emp .txt .dept{ font-size:11px; color:var(--text-2); margin-top:1px; }
+  .status-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px; font-weight:600; letter-spacing:0.05em;
+    padding:5px 9px; border-radius:4px; text-transform:uppercase;
+    white-space:nowrap; display:inline-block;
+    border-bottom:2px solid rgba(0,0,0,0.25);
+  }
+  .status-pill.avail{ background:rgba(56,217,147,0.14); color:var(--avail); border-color:var(--avail-dim); }
+  .status-pill.busy{ background:rgba(255,107,91,0.14); color:var(--busy); border-color:var(--busy-dim); }
+  .cell-note{ font-size:12px; color:var(--text-2); line-height:1.45; max-width:220px; }
+
+  @media (max-width:560px){
+    .board-table thead{ display:none; }
+    .board-table, .board-table tbody, .board-table tr, .board-table td{ display:block; width:100%; }
+    .board-table tbody tr{
+      background:var(--panel); border-bottom:1px solid var(--hair);
+      padding:12px; display:flex; flex-direction:column; gap:8px;
+    }
+    .board-table td{ padding:0; }
+    .cell-note{ max-width:none; }
+    .cell-note::before{
+      content:'Maklumat'; display:block; font-family:'IBM Plex Mono',monospace;
+      font-size:9.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-3);
+      margin-bottom:3px;
+    }
+  }
+
+  .empty{
+    text-align:center; padding:40px 20px; color:var(--text-3);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.04em;
+  }
+
+  /* CALENDAR VIEW */
+  .cal{ display:none; flex-direction:column; gap:10px; }
+  .cal.show{ display:flex; }
+  .list.hide{ display:none; }
+  .cal-legend{
+    display:flex; gap:16px; font-size:11px; color:var(--text-2); margin-bottom:4px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .cal-legend span{ display:flex; align-items:center; gap:5px; }
+  .dot{ width:8px; height:8px; border-radius:2px; display:inline-block; }
+  .dot.avail{ background:var(--avail); }
+  .dot.busy{ background:var(--busy); }
+
+  .cal-row{
+    background:var(--panel); border:1px solid var(--hair); border-radius:10px; padding:12px 14px;
+  }
+  .cal-row .cal-name{ font-size:13.5px; font-weight:600; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+  .cal-row .cal-name .dept-tag{ font-size:10px; font-weight:400; color:var(--text-3); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
+  .cal-day{
+    aspect-ratio:1; border-radius:5px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:2px;
+  }
+  .cal-day .d{ font-size:9px; font-family:'IBM Plex Mono',monospace; text-transform:uppercase; opacity:.85; }
+  .cal-day.avail{ background:rgba(56,217,147,0.14); color:var(--avail); }
+  .cal-day.busy{ background:rgba(255,107,91,0.14); color:var(--busy); }
+
+  footer{
+    margin-top:24px; text-align:center; font-size:10.5px; color:var(--text-3);
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; padding:0 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand-row">
+      <div>
+        <h1>Status Pekerja</h1>
+        <div class="sub">Papan status &middot; Team ICT Teknikal</div>
+      </div>
+      <div class="clock">
+        <div class="time" id="clockTime">--:--</div>
+        <div class="date" id="clockDate">-- --- ----</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-view="list">Senarai</button>
+      <button class="tab-btn" data-view="cal">Kalendar</button>
+    </div>
+
+    <div class="sync-bar">
+      <div class="sync-status">
+        <span class="sync-dot" id="syncDot"></span>
+        <span class="sync-text" id="syncText">Belum log masuk &middot; papar mock data</span>
+      </div>
+      <button class="sync-btn" id="syncBtn">Log Masuk Google</button>
+    </div>
+
+    <button class="isi-btn" id="isiBtn">+ Isi Appointment Saya</button>
+
+    <div class="controls">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="Cari nama pekerja...">
+      </div>
+      <select class="dept-select" id="deptSelect">
+        <option value="all">Semua Jabatan</option>
+      </select>
+      <div class="chips" id="filterChips">
+        <div class="chip active" data-filter="all">Semua</div>
+        <div class="chip" data-filter="available">Available</div>
+        <div class="chip" data-filter="busy">Busy</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="list" id="listView"></div>
+  <div class="cal" id="calView">
+    <div class="cal-legend">
+      <span><i class="dot avail"></i> Available</span>
+      <span><i class="dot busy"></i> Busy</span>
+    </div>
+    <div id="calContainer"></div>
+  </div>
+</main>
+
+<footer class="wrap">Log masuk Google untuk lihat status sebenar dan isi appointment/task anda sendiri — terus disegerakkan ke Google Calendar.</footer>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-title">Isi Appointment / Task Saya</div>
+    <div class="field">
+      <label>Tajuk</label>
+      <input type="text" id="fTitle" placeholder="Contoh: Mesyuarat Jawatankuasa Bil 3/2026">
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Mula</label>
+        <input type="datetime-local" id="fStart">
+      </div>
+      <div class="field">
+        <label>Tamat</label>
+        <input type="datetime-local" id="fEnd">
+      </div>
+    </div>
+    <div class="field">
+      <label>Catatan (pilihan)</label>
+      <textarea id="fDesc" placeholder="Lokasi, nota tambahan..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="fCancel">Batal</button>
+      <button class="btn-submit" id="fSubmit">Simpan ke Calendar</button>
+    </div>
+    <div class="modal-msg" id="fMsg"></div>
+  </div>
+</div>
+
+<script>
+const employees = [
+  { name:"Muhammad Iqbal Khan Bin Ibrahim", dept:"ICT Teknikal", email:"iqbalibrahim@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" },
+  { name:"Mohd Fauzi Bin Samat", dept:"ICT Teknikal", email:"fauzi@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" },
+  { name:"Mohammad Nor Azni Bin Zainal Abidin", dept:"ICT Teknikal", email:"norazni@mpku.gov.my", status:"unknown", note:"Belum disegerakkan" }
+];
+
+const days = ["ISN","SEL","RAB","KHA","JUM"];
+
+function initials(name){
+  const parts = name.replace(/bin |binti |a\/l |a\/p /gi,"").split(" ");
+  return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+}
+
+// deterministic pseudo-random pattern per employee for calendar mock
+function dayStatus(seed, dayIdx){
+  const v = (seed * 31 + dayIdx * 17) % 5;
+  return v < 2 ? "busy" : "available";
+}
+
+function populateDeptSelect(){
+  const select = document.getElementById('deptSelect');
+  const depts = [...new Set(employees.map(e => e.dept))];
+  select.innerHTML = '<option value="all">Semua Jabatan</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function renderList(){
+  const container = document.getElementById('listView');
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const activeFilter = document.querySelector('.chip.active').dataset.filter;
+  const activeDept = document.getElementById('deptSelect').value;
+
+  const filtered = employees.filter(e => {
+    const matchesQuery = e.name.toLowerCase().includes(query) || e.dept.toLowerCase().includes(query);
+    const matchesFilter = activeFilter === 'all' || e.status === activeFilter;
+    const matchesDept = activeDept === 'all' || e.dept === activeDept;
+    return matchesQuery && matchesFilter && matchesDept;
+  });
+
+  if(filtered.length === 0){
+    container.innerHTML = '<div class="empty">Tiada pekerja sepadan dengan carian.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="board-table">
+      <thead>
+        <tr>
+          <th>Pekerja</th>
+          <th>Status</th>
+          <th>Maklumat</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(e => `
+          <tr>
+            <td>
+              <div class="cell-emp">
+                <div class="avatar">${initials(e.name)}</div>
+                <div class="txt">
+                  <div class="name">${e.name}</div>
+                  <div class="dept">${e.dept}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="status-pill ${e.status === 'available' ? 'avail' : e.status === 'busy' ? 'busy' : 'unknown'}">${e.status === 'available' ? 'Available' : e.status === 'busy' ? 'Busy' : 'Belum Sync'}</span></td>
+            <td><div class="cell-note">${e.note}</div></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderCalendar(){
+  const container = document.getElementById('calContainer');
+  container.innerHTML = employees.map((e, seed) => `
+    <div class="cal-row" style="margin-bottom:10px;">
+      <div class="cal-name">
+        <span>${e.name}</span>
+        <span class="dept-tag">${e.dept}</span>
+      </div>
+      <div class="cal-grid">
+        ${days.map((d, i) => {
+          const s = e.week ? e.week[i] : 'unknown';
+          const cls = s === 'available' ? 'avail' : s === 'busy' ? 'busy' : 'unknown';
+          return `<div class="cal-day ${cls}"><span class="d">${d}</span></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateClock(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockTime').textContent = `${hh}:${mm}`;
+  const opts = { day:'2-digit', month:'short', year:'numeric' };
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('ms-MY', opts);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('listView').classList.toggle('hide', view !== 'list');
+    document.getElementById('calView').classList.toggle('show', view === 'cal');
+  });
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderList();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', renderList);
+document.getElementById('deptSelect').addEventListener('change', renderList);
+
+populateDeptSelect();
+renderList();
+renderCalendar();
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ===== Google Calendar Integration ===== */
+const CLIENT_ID = "552705528679-1236r3c1u5t5ii8gf098bnar3timpvu7.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events";
+let tokenClient = null;
+let accessToken = null;
+let currentUserEmail = null;
+
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+}
+
+async function fetchEmployeeStatus(emp, token){
+  try{
+    const now = new Date();
+    const startOfWeek = getMonday(now);
+    startOfWeek.setHours(0,0,0,0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 5);
+
+    const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method:"POST",
+      headers:{ "Authorization":"Bearer " + token, "Content-Type":"application/json" },
+      body: JSON.stringify({ timeMin: startOfWeek.toISOString(), timeMax: endOfWeek.toISOString(), items:[{ id: emp.email }] })
+    });
+    if(!fbRes.ok) throw new Error("freebusy " + fbRes.status);
+    const fbData = await fbRes.json();
+    const cal = fbData.calendars && fbData.calendars[emp.email];
+    if(!cal) throw new Error("tiada akses");
+    const busyPeriods = (cal.busy || []).map(p => ({ start:new Date(p.start), end:new Date(p.end) }));
+
+    emp.week = [];
+    for(let i = 0; i < 5; i++){
+      const dayStart = new Date(startOfWeek); dayStart.setDate(dayStart.getDate() + i);
+      const dayEnd = new Date(dayStart); dayEnd.setHours(23,59,59,999);
+      const isBusy = busyPeriods.some(p => p.start < dayEnd && p.end > dayStart);
+      emp.week.push(isBusy ? "busy" : "available");
+    }
+
+    const isBusyNow = busyPeriods.some(p => p.start <= now && p.end > now);
+    emp.status = isBusyNow ? "busy" : "available";
+
+    if(isBusyNow){
+      const dayStart = new Date(now); dayStart.setHours(0,0,0,0);
+      const dayEnd = new Date(now); dayEnd.setHours(23,59,59,999);
+      const evRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(emp.email)}/events?timeMin=${dayStart.toISOString()}&timeMax=${dayEnd.toISOString()}&singleEvents=true&orderBy=startTime`,
+        { headers:{ "Authorization":"Bearer " + token } }
+      );
+      let matched = null;
+      if(evRes.ok){
+        const evData = await evRes.json();
+        matched = (evData.items || []).find(ev => {
+          const s = new Date(ev.start.dateTime || ev.start.date);
+          const e = new Date(ev.end.dateTime || ev.end.date);
+          return s <= now && e > now;
+        });
+      }
+      if(matched){
+        const endTime = new Date(matched.end.dateTime || matched.end.date);
+        const endStr = endTime.toLocaleTimeString("ms-MY", { hour:"2-digit", minute:"2-digit" });
+        emp.note = `${matched.summary || "Mesyuarat"} (sehingga ${endStr})`;
+      } else {
+        emp.note = "Sibuk — tajuk mesyuarat tidak dapat diakses";
+      }
+    } else {
+      emp.note = "Di pejabat, boleh dihubungi";
+    }
+  } catch(err){
+    emp.status = "unknown";
+    emp.note = "Tiada akses kalendar — hubungi admin IT";
+    console.warn("Ralat sync kalendar untuk " + emp.email + ":", err.message || err);
+  }
+}
+
+async function syncAll(token){
+  const btn = document.getElementById("syncBtn");
+  const text = document.getElementById("syncText");
+  const dot = document.getElementById("syncDot");
+  btn.disabled = true;
+  text.textContent = "Menyegerakkan...";
+
+  await Promise.all(employees.map(e => fetchEmployeeStatus(e, token)));
+
+  renderList();
+  renderCalendar();
+
+  const anyError = employees.some(e => e.status === "unknown");
+  dot.classList.toggle("on", !anyError);
+  dot.classList.toggle("err", anyError);
+  const now = new Date();
+  text.textContent = "Disegerakkan pada " + now.toLocaleTimeString("ms-MY", { hour:"2-digit", minute:"2-digit" });
+  btn.disabled = false;
+  btn.textContent = "Segerak Semula";
+}
+
+function initGoogleAuth(){
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if(resp.error){
+        document.getElementById("syncDot").classList.add("err");
+        document.getElementById("syncText").textContent = "Log masuk gagal: " + resp.error;
+        return;
+      }
+      accessToken = resp.access_token;
+      fetchCurrentUserEmail(accessToken).then(() => {
+        syncAll(accessToken);
+        renderIsiButton();
+      });
+    }
+  });
+}
+
+document.getElementById("syncBtn").addEventListener("click", () => {
+  if(!tokenClient){
+    document.getElementById("syncText").textContent = "Google belum sedia, cuba lagi sebentar...";
+    return;
+  }
+  tokenClient.requestAccessToken();
+});
+
+(function waitForGoogle(){
+  if(window.google && google.accounts){
+    initGoogleAuth();
+  } else {
+    setTimeout(waitForGoogle, 300);
+  }
+})();
+
+setInterval(() => {
+  if(accessToken) syncAll(accessToken);
+}, 5 * 60 * 1000);
+
+/* ===== Isi Appointment (write ke Google Calendar sendiri) ===== */
+async function fetchCurrentUserEmail(token){
+  try{
+    const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers:{ "Authorization":"Bearer " + token }
+    });
+    if(!res.ok) return;
+    const data = await res.json();
+    currentUserEmail = data.email || null;
+  } catch(err){
+    console.warn("Tak dapat ambil email pengguna:", err);
+  }
+}
+
+function renderIsiButton(){
+  const btn = document.getElementById("isiBtn");
+  const isKnownEmployee = employees.some(e => e.email === currentUserEmail);
+  btn.classList.toggle("show", !!currentUserEmail);
+  btn.textContent = isKnownEmployee
+    ? "+ Isi Appointment Saya"
+    : "+ Isi Appointment (" + currentUserEmail + ")";
+}
+
+function toLocalInputValue(d){
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openModal(){
+  const now = new Date();
+  const later = new Date(now.getTime() + 60 * 60 * 1000);
+  document.getElementById("fTitle").value = "";
+  document.getElementById("fStart").value = toLocalInputValue(now);
+  document.getElementById("fEnd").value = toLocalInputValue(later);
+  document.getElementById("fDesc").value = "";
+  document.getElementById("fMsg").textContent = "";
+  document.getElementById("fMsg").className = "modal-msg";
+  document.getElementById("modalOverlay").classList.add("show");
+}
+
+function closeModal(){
+  document.getElementById("modalOverlay").classList.remove("show");
+}
+
+document.getElementById("isiBtn").addEventListener("click", openModal);
+document.getElementById("fCancel").addEventListener("click", closeModal);
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+  if(e.target.id === "modalOverlay") closeModal();
+});
+
+document.getElementById("fSubmit").addEventListener("click", async () => {
+  const title = document.getElementById("fTitle").value.trim();
+  const startVal = document.getElementById("fStart").value;
+  const endVal = document.getElementById("fEnd").value;
+  const desc = document.getElementById("fDesc").value.trim();
+  const msg = document.getElementById("fMsg");
+  const submitBtn = document.getElementById("fSubmit");
+
+  if(!title || !startVal || !endVal){
+    msg.textContent = "Sila lengkapkan tajuk, masa mula dan tamat.";
+    msg.className = "modal-msg err";
+    return;
+  }
+  if(new Date(endVal) <= new Date(startVal)){
+    msg.textContent = "Masa tamat mesti selepas masa mula.";
+    msg.className = "modal-msg err";
+    return;
+  }
+  if(!accessToken || !currentUserEmail){
+    msg.textContent = "Sila log masuk Google dahulu.";
+    msg.className = "modal-msg err";
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Menyimpan...";
+
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method:"POST",
+      headers:{ "Authorization":"Bearer " + accessToken, "Content-Type":"application/json" },
+      body: JSON.stringify({
+        summary: title,
+        description: desc || undefined,
+        start:{ dateTime: new Date(startVal).toISOString(), timeZone: tz },
+        end:{ dateTime: new Date(endVal).toISOString(), timeZone: tz }
+      })
+    });
+    if(!res.ok){
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error && errData.error.message ? errData.error.message : ("HTTP " + res.status));
+    }
+    msg.textContent = "Berjaya disimpan ke Google Calendar anda!";
+    msg.className = "modal-msg ok";
+    await syncAll(accessToken);
+    setTimeout(closeModal, 1200);
+  } catch(err){
+    msg.textContent = "Gagal menyimpan: " + err.message;
+    msg.className = "modal-msg err";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Simpan ke Calendar";
+  }
+});
+</script>
+
+</body>
+</html>
